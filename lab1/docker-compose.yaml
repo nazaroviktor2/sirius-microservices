@@ -1,0 +1,61 @@
+services:
+  balancer:
+    image: nginx:1.27.2-alpine3.20
+    restart: unless-stopped
+    ports:
+      - 8000:80
+    volumes:
+      - ./nginx:/etc/nginx/templates
+    depends_on:
+      - rpc-gateway
+      - static-gateway
+
+  rpc-gateway:
+    build:
+      dockerfile: docker/rpc/Dockerfile
+      context: .
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    ports:
+      - "8001:8000"
+    depends_on:
+      - to-upper
+      - to-lower
+
+  static-gateway:
+    image: nginx:latest
+    ports:
+      - "8002:80"
+    volumes:
+      - ./static:/usr/share/nginx/html/static
+
+  to-upper:
+    build:
+      dockerfile: docker/service/Dockerfile
+      context: .
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    environment:
+      DO_JOB: to_upper
+    ports:
+      - "8003:8000"
+
+  to-lower:
+    build:
+      dockerfile: docker/service/Dockerfile
+      context: .
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DO_JOB: to_lower
+    ports:
+      - "8004:8000"
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"

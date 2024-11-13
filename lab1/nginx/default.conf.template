@@ -1,0 +1,21 @@
+upstream rpc-gateway {
+   server rpc-gateway:8000;
+}
+
+upstream static-gateway {
+   server static-gateway:80;
+}
+
+
+server {
+   listen 80;
+
+   location /rpc {
+      proxy_pass http://rpc-gateway;
+   }
+
+    location /static {
+      proxy_pass http://static-gateway;
+   }
+
+}
